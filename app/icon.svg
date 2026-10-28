@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Pools by Pros">
+  <rect width="32" height="32" rx="8" fill="#00adef"/>
+  <g transform="translate(4 6)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 8c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/>
+    <path d="M0 13c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/>
+    <path d="M2 3V1a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v2"/>
+  </g>
+</svg>
