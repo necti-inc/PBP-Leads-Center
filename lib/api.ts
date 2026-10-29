@@ -1,5 +1,14 @@
 import { config } from "./config"
-import type { Lead, LeadStats } from "./types"
+import type {
+    Customer,
+    CustomersSummary,
+    Lead,
+    LeadStats,
+    OverviewData,
+    TimeOff,
+    Visit,
+    WorkSchedule,
+} from "./types"
 import { normalizeStatus } from "./types"
 
 function getApiKey(): string {
@@ -146,6 +155,185 @@ export async function deleteLeadAttachment(
         { method: "DELETE" }
     )
     return { ...data.lead, status: normalizeStatus(data.lead.status) }
+}
+
+export async function fetchOverview(params?: {
+    year?: number
+    month?: number
+}): Promise<OverviewData> {
+    const query = new URLSearchParams()
+    if (params?.year) query.set("year", String(params.year))
+    if (params?.month) query.set("month", String(params.month))
+    const qs = query.toString()
+    return request<OverviewData>(`/overview${qs ? `?${qs}` : ""}`)
+}
+
+export async function fetchCustomers(params?: {
+    status?: string
+    search?: string
+    source?: string
+}): Promise<{ customers: Customer[]; summary: CustomersSummary }> {
+    const query = new URLSearchParams()
+    if (params?.status) query.set("status", params.status)
+    if (params?.search) query.set("search", params.search)
+    if (params?.source) query.set("source", params.source)
+    const qs = query.toString()
+    return request(`/customers${qs ? `?${qs}` : ""}`)
+}
+
+export async function createCustomer(payload: {
+    fullname: string
+    phonenumber: string
+    email?: string
+    homeaddress?: string
+    city?: string
+    zipcode?: string
+    notes?: string
+    preferredDate?: string | null
+    activityStatus?: "active" | "inactive"
+    source?: string
+    poolSize?: string
+    projectType?: string
+}): Promise<Customer> {
+    const data = await request<{ customer: Customer }>("/customers", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    })
+    return data.customer
+}
+
+export async function fetchCustomer(
+    id: string
+): Promise<{ customer: Customer; visits: Visit[] }> {
+    return request(`/customers/${id}`)
+}
+
+export async function updateCustomer(
+    id: string,
+    updates: Partial<
+        Pick<
+            Customer,
+            | "fullname"
+            | "phonenumber"
+            | "email"
+            | "homeaddress"
+            | "city"
+            | "zipcode"
+            | "notes"
+            | "activityStatus"
+            | "preferredDate"
+            | "poolSize"
+            | "projectType"
+            | "source"
+            | "estimate"
+        >
+    >
+): Promise<Customer> {
+    const data = await request<{ customer: Customer }>(`/customers/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+    })
+    return data.customer
+}
+
+export async function deleteCustomer(
+    id: string
+): Promise<{ ok: boolean; id: string; visitsDeleted: number }> {
+    return request(`/customers/${id}`, { method: "DELETE" })
+}
+
+export async function createVisit(payload: {
+    date: string
+    title?: string
+    customerId?: string | null
+    customerName?: string
+    notes?: string
+    status?: string
+    frequency?: "once" | "weekly" | "biweekly" | "monthly"
+    occurrences?: number
+}): Promise<{ visit: Visit; visits: Visit[]; created: number; skipped: { date: string; reason: string }[]; frequency: string }> {
+    const data = await request<{
+        visit: Visit
+        visits?: Visit[]
+        created?: number
+        skipped?: { date: string; reason: string }[]
+        frequency?: string
+    }>("/visits", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    })
+    return {
+        visit: data.visit,
+        visits: data.visits || [data.visit],
+        created: data.created ?? 1,
+        skipped: data.skipped || [],
+        frequency: data.frequency || payload.frequency || "once",
+    }
+}
+
+export async function updateVisit(
+    id: string,
+    updates: Partial<
+        Pick<Visit, "date" | "status" | "notes" | "title" | "startHour" | "endHour">
+    >
+): Promise<Visit> {
+    const data = await request<{ visit: Visit }>(`/visits/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+    })
+    return data.visit
+}
+
+export async function rescheduleVisit(
+    id: string,
+    payload: { date: string; scope?: "one" | "series" }
+): Promise<{
+    visit: Visit
+    visits: Visit[]
+    updated: number
+    skipped: { id: string; date: string; reason: string }[]
+    scope: string
+}> {
+    return request(`/visits/${id}/reschedule`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    })
+}
+
+export async function createTimeOff(payload: {
+    date: string
+    label?: string
+    notes?: string
+}): Promise<TimeOff> {
+    const data = await request<{ timeOff: TimeOff }>("/time-off", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    })
+    return data.timeOff
+}
+
+export async function deleteTimeOff(date: string): Promise<void> {
+    await request<{ ok: boolean }>(`/time-off/${date}`, { method: "DELETE" })
+}
+
+export async function fetchSchedule(): Promise<WorkSchedule> {
+    return request<WorkSchedule>("/schedule")
+}
+
+export async function updateSchedule(workdays: number[]): Promise<WorkSchedule> {
+    return request<WorkSchedule>("/schedule", {
+        method: "PUT",
+        body: JSON.stringify({ workdays }),
+    })
+}
+
+export async function syncCustomersFromLeads(): Promise<{
+    ok: boolean
+    customersSynced: number
+    visitsEnsured: number
+    leads: number
+}> {
+    return request("/customers/sync-from-leads", { method: "POST", body: "{}" })
 }
 
 export function isAuthenticated(): boolean {

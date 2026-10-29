@@ -48,7 +48,8 @@ export default function Login({ onLogin }: LoginProps) {
                         alt={config.appName}
                         fill
                         style={{ objectFit: "contain", objectPosition: "left center" }}
-                        sizes="210px"
+                        sizes="240px"
+                        quality={100}
                         priority
                     />
                 </div>

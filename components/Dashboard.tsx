@@ -9,14 +9,18 @@ import type { Lead, LeadStats } from "@/lib/types"
 import { buildSourceFilterOptions, getActiveSourceLabel } from "@/lib/sources"
 import { filterLeads } from "@/lib/leads"
 import ActionAlerts from "./ActionAlerts"
+import CustomersView from "./CustomersView"
 import Login from "./Login"
 import LeadCard from "./LeadCard"
 import LeadDetail from "./LeadDetail"
+import OverviewView from "./OverviewView"
 import PipelineBoard from "./PipelineBoard"
 import SourceFilterBar from "./SourceFilterBar"
 import StatsOverview, { StatsView } from "./StatsOverview"
 import StatusFilterBar from "./StatusFilterBar"
 import {
+    IconCalendar,
+    IconCustomers,
     IconLeads,
     IconList,
     IconLogout,
@@ -25,21 +29,30 @@ import {
     IconStats,
 } from "./icons"
 
-type View = "leads" | "stats"
+type View = "overview" | "leads" | "customers" | "stats"
 type LeadsLayout = "pipeline" | "list"
 
 const LAYOUT_KEY = "pbp_leads_layout"
 const SOURCE_FILTER_KEY = "pbp_source_filter"
 
 const NAV_ITEMS: { id: View; label: string; Icon: typeof IconLeads }[] = [
+    { id: "overview", label: "Overview", Icon: IconCalendar },
     { id: "leads", label: "Leads", Icon: IconLeads },
+    { id: "customers", label: "Customers", Icon: IconCustomers },
     { id: "stats", label: "Analytics", Icon: IconStats },
 ]
+
+const VIEW_TITLES: Record<View, string> = {
+    overview: "Overview",
+    leads: "Leads",
+    customers: "Customers",
+    stats: "Analytics",
+}
 
 export default function Dashboard() {
     const [authed, setAuthed] = useState(false)
     const [mounted, setMounted] = useState(false)
-    const [view, setView] = useState<View>("leads")
+    const [view, setView] = useState<View>("overview")
     const [leadsLayout, setLeadsLayout] = useState<LeadsLayout>("list")
     const [layoutReady, setLayoutReady] = useState(false)
     const [leads, setLeads] = useState<Lead[]>([])
@@ -57,8 +70,19 @@ export default function Dashboard() {
         setMounted(true)
         setAuthed(isAuthenticated())
 
-        const leadId = new URLSearchParams(window.location.search).get("lead")
+        const params = new URLSearchParams(window.location.search)
+        const leadId = params.get("lead")
         if (leadId) pendingLeadIdRef.current = leadId
+
+        const viewParam = params.get("view")
+        if (
+            viewParam === "overview" ||
+            viewParam === "leads" ||
+            viewParam === "customers" ||
+            viewParam === "stats"
+        ) {
+            setView(viewParam)
+        }
 
         const saved = localStorage.getItem(LAYOUT_KEY) as LeadsLayout | null
         if (saved === "pipeline" || saved === "list") {
@@ -100,7 +124,6 @@ export default function Dashboard() {
     useEffect(() => {
         if (authed && layoutReady) loadData()
     }, [authed, layoutReady, loadData])
-
 
     useEffect(() => {
         if (!authed) return
@@ -237,12 +260,10 @@ export default function Dashboard() {
                             alt={config.appName}
                             fill
                             style={{ objectFit: "contain", objectPosition: "left center" }}
-                            sizes="118px"
+                            sizes="160px"
+                            quality={100}
                             priority
                         />
-                    </div>
-                    <div>
-                        <div className="sidebar__tag">{config.appSubtitle}</div>
                     </div>
                 </div>
 
@@ -284,22 +305,29 @@ export default function Dashboard() {
                                     alt={config.appName}
                                     fill
                                     style={{ objectFit: "contain", objectPosition: "left center" }}
-                                    sizes="88px"
+                                    sizes="120px"
+                                    quality={100}
                                 />
                             </div>
                         )}
                         <h1 className="topbar__title">
-                            {isMobile
-                                ? config.appSubtitle
-                                : view === "leads"
-                                  ? "Leads"
-                                  : "Analytics"}
+                            {isMobile ? config.appSubtitle : VIEW_TITLES[view]}
                         </h1>
                         {stats && view === "leads" && (
                             <p className="topbar__subtitle">
                                 {stats.total} total · {stats.today} today
                                 {activeSourceLabel ? ` · ${activeSourceLabel} only` : ""}
                                 {alertCount > 0 && ` · ${alertCount} need attention`}
+                            </p>
+                        )}
+                        {view === "overview" && (
+                            <p className="topbar__subtitle">
+                                In-app calendar · quote visits at a glance
+                            </p>
+                        )}
+                        {view === "customers" && (
+                            <p className="topbar__subtitle">
+                                Form submissions + manual customers · active when scheduled or completed
                             </p>
                         )}
                         {view === "stats" && (
@@ -333,14 +361,16 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         )}
-                        <button
-                            className="topbar__refresh btn-ghost"
-                            onClick={() => loadData()}
-                            disabled={loading}
-                            aria-label={loading ? "Refreshing" : "Refresh leads"}
-                        >
-                            {loading ? "…" : isMobile ? "↻" : "Refresh"}
-                        </button>
+                        {view === "leads" && (
+                            <button
+                                className="topbar__refresh btn-ghost"
+                                onClick={() => loadData()}
+                                disabled={loading}
+                                aria-label={loading ? "Refreshing" : "Refresh leads"}
+                            >
+                                {loading ? "…" : isMobile ? "↻" : "Refresh"}
+                            </button>
+                        )}
                         {isMobile && (
                             <button
                                 className="topbar__logout-btn icon-btn"
@@ -363,10 +393,24 @@ export default function Dashboard() {
                     />
                 )}
 
-                <div className={`content ${view === "leads" && effectiveLayout === "pipeline" ? "content--wide" : ""}`}>
-                    {stats && view === "leads" && (
-                        <StatsOverview stats={stats} compact={effectiveLayout === "pipeline"} />
+                <div
+                    className={`content ${view === "leads" && effectiveLayout === "pipeline" ? "content--wide" : ""}`}
+                >
+                    {view === "overview" && (
+                        <OverviewView
+                            showToast={showToast}
+                            onOpenCustomer={(customerId) => {
+                                const params = new URLSearchParams(window.location.search)
+                                params.set("view", "customers")
+                                params.set("customer", customerId)
+                                const qs = params.toString()
+                                window.history.replaceState({}, "", qs ? `/?${qs}` : "/")
+                                setView("customers")
+                            }}
+                        />
                     )}
+
+                    {view === "customers" && <CustomersView showToast={showToast} />}
 
                     {view === "stats" ? (
                         stats ? (
@@ -376,86 +420,99 @@ export default function Dashboard() {
                                 <div className="spinner" />
                             </div>
                         )
-                    ) : effectiveLayout === "pipeline" ? (
-                        loading ? (
-                            <div className="loading-state">
-                                <div className="spinner" />
-                                <p>Loading pipeline...</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="toolbar toolbar--pipeline">
-                                    <div className="search-input">
-                                        <IconSearch />
-                                        <input
-                                            type="search"
-                                            placeholder="Search leads..."
-                                            value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="leads-controls leads-controls--pipeline">
-                                    {leadsFilters}
-                                </div>
-                                <PipelineBoard
-                                    leads={filteredLeads}
-                                    onSelect={setSelectedLead}
-                                    onLeadUpdate={handleLeadUpdate}
-                                    onLeadDelete={handleLeadDelete}
-                                    showToast={showToast}
-                                    alertKinds={alertKinds}
-                                />
-                            </>
-                        )
-                    ) : (
+                    ) : null}
+
+                    {view === "leads" && (
                         <>
-                            <div className="leads-controls">
-                                <div className="toolbar">
-                                    <div className="search-input">
-                                        <IconSearch />
-                                        <input
-                                            type="search"
-                                            placeholder="Search leads..."
-                                            value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
-                                        />
+                            {stats && (
+                                <StatsOverview
+                                    stats={stats}
+                                    compact={effectiveLayout === "pipeline"}
+                                />
+                            )}
+
+                            {effectiveLayout === "pipeline" ? (
+                                loading ? (
+                                    <div className="loading-state">
+                                        <div className="spinner" />
+                                        <p>Loading pipeline...</p>
                                     </div>
-                                </div>
-
-                                {leadsFilters}
-                            </div>
-
-                            {loading ? (
-                                <div className="loading-state">
-                                    <div className="spinner" />
-                                    <p>Loading leads...</p>
-                                </div>
-                            ) : filteredLeads.length === 0 ? (
-                                <div className="empty-state">
-                                    <div className="empty-state__icon">☀️</div>
-                                    <h3>No leads found</h3>
-                                    <p>
-                                        {leads.length === 0
-                                            ? "New inquiries from your website will appear here."
-                                            : activeSourceLabel
-                                              ? `No ${activeSourceLabel.toLowerCase()} leads match your filters.`
-                                              : "Try adjusting your search or filters."}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="leads-grid">
-                                    {filteredLeads.map((lead) => (
-                                        <LeadCard
-                                            key={lead.id}
-                                            lead={lead}
-                                            onClick={() => setSelectedLead(lead)}
-                                            onStatusChange={handleLeadUpdate}
-                                            onDelete={handleLeadDelete}
-                                            alertKind={followUpAlerts.find((a) => a.lead.id === lead.id)?.kind}
+                                ) : (
+                                    <>
+                                        <div className="toolbar toolbar--pipeline">
+                                            <div className="search-input">
+                                                <IconSearch />
+                                                <input
+                                                    type="search"
+                                                    placeholder="Search leads..."
+                                                    value={search}
+                                                    onChange={(e) => setSearch(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="leads-controls leads-controls--pipeline">
+                                            {leadsFilters}
+                                        </div>
+                                        <PipelineBoard
+                                            leads={filteredLeads}
+                                            onSelect={setSelectedLead}
+                                            onLeadUpdate={handleLeadUpdate}
+                                            onLeadDelete={handleLeadDelete}
+                                            showToast={showToast}
+                                            alertKinds={alertKinds}
                                         />
-                                    ))}
-                                </div>
+                                    </>
+                                )
+                            ) : (
+                                <>
+                                    <div className="leads-controls">
+                                        <div className="toolbar">
+                                            <div className="search-input">
+                                                <IconSearch />
+                                                <input
+                                                    type="search"
+                                                    placeholder="Search leads..."
+                                                    value={search}
+                                                    onChange={(e) => setSearch(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {leadsFilters}
+                                    </div>
+
+                                    {loading ? (
+                                        <div className="loading-state">
+                                            <div className="spinner" />
+                                            <p>Loading leads...</p>
+                                        </div>
+                                    ) : filteredLeads.length === 0 ? (
+                                        <div className="empty-state">
+                                            <div className="empty-state__icon">☀️</div>
+                                            <h3>No leads found</h3>
+                                            <p>
+                                                {leads.length === 0
+                                                    ? "New inquiries from your website will appear here."
+                                                    : activeSourceLabel
+                                                      ? `No ${activeSourceLabel.toLowerCase()} leads match your filters.`
+                                                      : "Try adjusting your search or filters."}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="leads-grid">
+                                            {filteredLeads.map((lead) => (
+                                                <LeadCard
+                                                    key={lead.id}
+                                                    lead={lead}
+                                                    onClick={() => setSelectedLead(lead)}
+                                                    onStatusChange={handleLeadUpdate}
+                                                    onDelete={handleLeadDelete}
+                                                    alertKind={followUpAlerts.find((a) => a.lead.id === lead.id)?.kind}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}

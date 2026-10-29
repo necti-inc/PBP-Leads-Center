@@ -90,3 +90,96 @@ export interface LeadStats {
     today: number
     thisWeek: number
 }
+
+export type ActivityStatus = "active" | "inactive"
+export type VisitStatus = "scheduled" | "completed" | "cancelled"
+export type VisitFrequency = "once" | "weekly" | "biweekly" | "monthly"
+
+export interface Customer {
+    id: string
+    fullname: string
+    firstName?: string | null
+    lastName?: string | null
+    phonenumber: string
+    email: string
+    homeaddress: string
+    city: string
+    zipcode: string
+    notes: string
+    source: string
+    activityStatus: ActivityStatus
+    preferredDate?: string | null
+    serviceFrequency?: VisitFrequency
+    leadId?: string | null
+    leadIds?: string[]
+    poolSize?: string | null
+    projectType?: string | null
+    estimate?: number | null
+    createdAt?: string | null
+    updatedAt?: string | null
+}
+
+export interface Visit {
+    id: string
+    title: string
+    date: string | null
+    startHour: number
+    endHour: number
+    status: VisitStatus
+    notes: string
+    customerId?: string | null
+    customerName: string
+    customerAddress?: string | null
+    customerPhone?: string | null
+    leadId?: string | null
+    source: string
+    frequency?: VisitFrequency
+    frequencyLabel?: string
+    seriesId?: string | null
+    occurrenceIndex?: number
+    createdAt?: string | null
+    updatedAt?: string | null
+}
+
+export interface TimeOff {
+    id: string
+    date: string
+    allDay: boolean
+    label: string
+    notes: string
+    createdAt?: string | null
+    updatedAt?: string | null
+}
+
+export interface OverviewData {
+    year: number
+    month: number
+    from: string
+    to: string
+    maxPerDay: number
+    counts: Record<string, number>
+    fullDates: string[]
+    oooDates?: string[]
+    closedWeekdays?: string[]
+    workdays?: number[]
+    timeOff?: TimeOff[]
+    visits: Visit[]
+    stats: {
+        customersTotal: number
+        customersActive: number
+        customersInactive: number
+        leadsTotal: number
+        visitsThisMonth: number
+    }
+}
+
+export interface WorkSchedule {
+    workdays: number[]
+    updatedAt?: string | null
+}
+
+export interface CustomersSummary {
+    total: number
+    active: number
+    inactive: number
+}

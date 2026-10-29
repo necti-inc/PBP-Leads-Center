@@ -31,6 +31,28 @@ export function IconStats({ className = "" }: { className?: string }) {
     )
 }
 
+export function IconCalendar({ className = "" }: { className?: string }) {
+    return (
+        <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" />
+            <line x1="16" x2="16" y1="2" y2="6" />
+            <line x1="8" x2="8" y1="2" y2="6" />
+            <line x1="3" x2="21" y1="10" y2="10" />
+        </svg>
+    )
+}
+
+export function IconCustomers({ className = "" }: { className?: string }) {
+    return (
+        <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" x2="19" y1="8" y2="14" />
+            <line x1="22" x2="16" y1="11" y2="11" />
+        </svg>
+    )
+}
+
 export function IconQuote({ className = "" }: { className?: string }) {
     return (
         <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -179,6 +201,24 @@ export function IconChevron({
             strokeLinejoin="round"
         >
             <path d="m6 9 6 6 6-6" />
+        </svg>
+    )
+}
+
+export function IconDirections({ className = "" }: { className?: string }) {
+    return (
+        <svg
+            className={className}
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <polygon points="3 11 22 2 13 21 11 13 3 11" />
         </svg>
     )
 }
